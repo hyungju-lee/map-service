@@ -7,12 +7,18 @@
   <title>myfirstmap</title>
   <link rel="stylesheet" href="/stylesheets/style.css">
   <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=vf2sd1hd65"></script>
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=8514c408bbfe1a0e1952c548ca003181&libraries=services"></script>
 </head>
 <body>
 <div id="navbar">myfirstmap</div>
 <div id="infoBox">
   <div id="infoTitle">현재날짜</div>
   <div id="infoContent">2020.11.08</div>
+</div>
+<div id="search">
+  <input type="text" placeholder="목적지를 입력해주세요." id="search_input">
+  <button id="search_button" type="button">검색</button>
 </div>
 <div id="current">현재 위치</div>
 <div id="map" style="width:100%;height:100vh;padding-top:50px"></div>
@@ -82,6 +88,79 @@
       } else {
         infowindow.open(map, marker); // map의 marker 위에다가 infowindow를 열리게해라.
       }
+    }
+  }
+
+  let currentUse = true;
+
+  $("#current").on("click", () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const latlng = new naver.maps.LatLng(lat, lng);
+
+        if (currentUse) {
+          const marker = new naver.maps.Marker({
+            map: map,
+            position: latlng,
+            icon: {
+              content: '<img class="pulse" draggable="false" unselectable="on" src="https://myfirstmap.s3.ap-northeast-2.amazonaws.com/circle.png">', // drag 불가능, 선택도 불가능
+              anchor: new naver.maps.Point(11, 11),
+            }
+          })
+          currentUse = false;
+        }
+
+        map.setZoom(15, false); // zoom은 15정도로 하고 이동하는 애니메이션은 주지 않겠다.(false)
+        map.panTo(latlng); // 현재위치로 이동
+      })
+    } else {
+      alert("위치정보 사용 불가능");
+    }
+  })
+
+  let ps = new kakao.maps.services.Places(); // 앞으로 목적지 검색을 하는데 있어서 중요한 역할을 하게되는 함수 중에 하나다.
+  let search_arr = [];
+
+  $("#search_input").on("keydown", function (e) {
+    if (e.keyCode === 13) { // enter key 눌렀을 때,
+      let content = $(this).val();
+      ps.keywordSearch(content, placeSearchCB); // content 를 통해서 api를 요청하게 되고 그거에 대한 결과값이 placeSearchCB 라는 함수를 통해서 처리된다.
+    }
+  })
+
+  $("#search_button").on("click", function () {
+    let content = $("#search_input").val();
+    ps.keywordSearch(content, placeSearchCB); // content 를 통해서 api를 요청하게 되고 그거에 대한 결과값이 placeSearchCB 라는 함수를 통해서 처리된다.
+  })
+
+  function placeSearchCB (data, status, pagination) {
+    // data - 검색결과
+    // status - api를 카카오 서버를 활용할 것이기 때문에 그 서버에 대한 상태를 status를 통해 받을 수 있다.
+    // pagination - 검색 결과가 얼만큼 있는지 번호를 통해 알 수 있게 해준다.
+    if (status === kakao.maps.services.Status.OK) {
+      let target = data[0];
+      const lat = target.y;
+      const lng = target.x;
+      const latlng = new naver.maps.LatLng(lat, lng);
+      const marker = new naver.maps.Marker({
+        map: map,
+        position: latlng,
+      })
+
+      if (search_arr.length === 0) {
+        search_arr.push(marker);
+      } else {
+        search_arr.push(marker);
+        let pre_marker = search_arr.splice(0, 1); // splice 메서드는 search_arr 배열 자체에 영향을 끼치는 메서드이다. 맨 앞에값 한개 지운다는 뜻이다.
+        pre_marker[0].setMap(null); // 아, setMap 메서드는 naver maps 메서드인가보다. 이전 마커 지우는 역할이다.
+      }
+
+      map.setZoom(15, false); // zoom은 15정도로 하고 이동하는 애니메이션은 주지 않겠다.(false)
+      map.panTo(latlng); // 현재위치로 이동
+    } else {
+      alert("검색 결과가 없습니다.");
     }
   }
 </script>

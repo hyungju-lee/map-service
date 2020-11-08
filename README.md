@@ -586,3 +586,241 @@ var mapOptions = {
   font-weight: bolder;
 }
 ```
+
+## jQuery 적용 및 사용해보기, 현재 위치 표시하기
+
+* [jQuery site](https://code.jquery.com/)
+
+```javascript
+$("#current").on("click", () => {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            const latlng = new naver.maps.LatLng(lat, lng);
+            const marker = new naver.maps.Marker({
+                map: map,
+                position: latlng,
+            icon: {
+                content: '<img class="pulse" draggable="false" unselectable="on" src="https://myfirstmap.s3.ap-northeast-2.amazonaws.com/circle.png">', // drag 불가능, 선택도 불가능
+                anchor: new naver.maps.Point(11, 11),
+            }
+        })
+        map.setZoom(15, false); // zoom은 15정도로 하고 이동하는 애니메이션은 주지 않겠다.(false)
+        map.panTo(latlng); // 현재위치로 이동
+    })
+    } else {
+        alert("위치정보 사용 불가능");
+    }
+})
+```
+
+## 현재 위치 마커에 css 적용하기
+
+
+```javascript
+const marker = new naver.maps.Marker({
+  map: map,
+  position: latlng,
+  icon: {
+    content: '<img class="pulse" draggable="false" unselectable="on" src="https://myfirstmap.s3.ap-northeast-2.amazonaws.com/circle.png">', // drag 불가능, 선택도 불가능
+    anchor: new naver.maps.Point(11, 11),
+  }
+})
+```
+
+```css
+.pulse {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 rgb(255,0,0);
+  animation: pulse 1.7s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(204, 49, 44, 0.4);
+    -moz-box-shadow: 0 0 0 0 rgba(204, 49, 44, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(204, 49, 44, 0);
+    -moz-box-shadow: 0 0 0 20px rgba(204, 49, 44, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(204, 49, 44, 0);
+    -moz-box-shadow: 0 0 0 0 rgba(204, 49, 44, 0);
+  }
+}
+
+@-webkit-keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(204, 49, 44, 0.4);
+    -moz-box-shadow: 0 0 0 0 rgba(204, 49, 44, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(204, 49, 44, 0);
+    -moz-box-shadow: 0 0 0 20px rgba(204, 49, 44, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(204, 49, 44, 0);
+    -moz-box-shadow: 0 0 0 0 rgba(204, 49, 44, 0);
+  }
+}
+```
+
+현재위치 최초 1회만 실행되게 처리  
+아래 코드도 수정해야될 부분이 있어 보인다.
+
+```javascript
+  let currentUse = true;
+
+  $("#current").on("click", () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(function (position) {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const latlng = new naver.maps.LatLng(lat, lng);
+        
+        if (currentUse) {
+          const marker = new naver.maps.Marker({
+            map: map,
+            position: latlng,
+            icon: {
+              content: '<img class="pulse" draggable="false" unselectable="on" src="https://myfirstmap.s3.ap-northeast-2.amazonaws.com/circle.png">', // drag 불가능, 선택도 불가능
+              anchor: new naver.maps.Point(11, 11),
+            }
+          })
+          currentUse = false;
+        }
+
+        map.setZoom(15, false); // zoom은 15정도로 하고 이동하는 애니메이션은 주지 않겠다.(false)
+        map.panTo(latlng); // 현재위치로 이동
+      })
+    } else {
+      alert("위치정보 사용 불가능");
+    }
+  })
+```
+
+## 지도위에 검색창 만들기 - 카카오 api 활용
+
+```html
+<div id="search">
+  <input type="text" placeholder="목적지를 입력해주세요." id="search_input">
+  <button id="search_button">검색</button>
+</div>
+```
+
+```css
+#search {
+  position: absolute;
+  top: 100px;
+  left: 140px;
+  z-index: 10;
+  padding: 15px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background-color: #fff;
+  text-align: center;
+}
+
+#search_input {
+  border: none;
+}
+
+#search_input:focus {
+  outline: none;
+}
+```
+
+## 카카오 api key 발급 및 적용하기
+
+* 네이버에서는 주소를 통해 좌표를 제공해주는 api를 제공해주고 있고,  
+* 카카오에서는 키워드 검색, 저희가 일반적으로 지도에서 목적지 검색을 했을 때 좌표를 제공하는 api를 제공해주고 있다.
+
+그래서 해당 지도서비스는 비록 네이버 api를 통해서 지도 구축을 했지만, 이번에는 카카오에서 제공하는 api를 통해서 
+목적지 검색을 구현해보도록 하겠다.  
+
+**그렇기 때문에 네이버 지도 api를 적용했을 때처럼 키 발급을 해줘야된다.**  
+
+1. 구글 - '카카오 개발자' 검색 [카카오개발자 사이트](https://developers.kakao.com/)
+2. '내 애플리케이션' 클릭
+3. 로그인 -> 애플리케이션을 추가할 수 있는 사이트가 나온다.
+4. '애플리케이션 추가하기' 클릭
+5. 앱 이름 : myfirstmap  
+   회사 이름 : myfirstmap
+6. 저장
+
+이렇게하면 카카오에서 제공하는 api 서비스들 중 하나를 할당받은게 된다.
+
+![](/img/image21.jpg)
+
+그럼 네이버 API 제공받았을 때처럼 키값을 확인할 수 있는데, 우리가 여기서 필요한 것은 **REST API 키**이다.  
+**REST API 키**를 가지고 우리 지도 서비스에 적용해보도록 하겠다.
+
+```html
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=복사한RESTAPI키&libraries=services"></script>
+```
+
+```javascript
+  let ps = new kakao.maps.services.Places(); // 앞으로 목적지 검색을 하는데 있어서 중요한 역할을 하게되는 함수 중에 하나다.
+
+  $("#search_input").on("keydown", function (e) {
+    if (e.keyCode === 13) { // enter key 눌렀을 때,
+      let content = $(this).val();
+    }
+  })
+```
+
+## 카카오 api를 활용한 목적지 검색 기능 구현하기
+
+![](/img/image22.jpg)
+![](/img/image23.jpg)
+
+이런식으로 검색한 데이터가 json 형태로 전달되는 것을 알 수 있다.  
+위도 경도 값도 담겨있는 것을 볼 수 있다.  
+카카오 같은 경우는 x에 경도 y에 위도가 담겨있다.  
+
+**배열의 첫번째 값이 검색결과에 가장 근접하다고 인식되어지는 값이다.**  
+그렇기 때문에 첫번째 결과값을 지도에 표시해보도록 하겠다.
+
+```javascript
+  let ps = new kakao.maps.services.Places(); // 앞으로 목적지 검색을 하는데 있어서 중요한 역할을 하게되는 함수 중에 하나다.
+
+  $("#search_input").on("keydown", function (e) {
+    if (e.keyCode === 13) { // enter key 눌렀을 때,
+      let content = $(this).val();
+      ps.keywordSearch(content, placeSearchCB); // content 를 통해서 api를 요청하게 되고 그거에 대한 결과값이 placeSearchCB 라는 함수를 통해서 처리된다.
+    }
+  })
+
+  function placeSearchCB (data, status, pagination) {
+    // data - 검색결과
+    // status - api를 카카오 서버를 활용할 것이기 때문에 그 서버에 대한 상태를 status를 통해 받을 수 있다.
+    // pagination - 검색 결과가 얼만큼 있는지 번호를 통해 알 수 있게 해준다.
+    if (status === kakao.maps.services.Status.OK) {
+      let target = data[0];
+      const lat = target.y;
+      const lng = target.x;
+      const latlng = new naver.maps.LatLng(lat, lng);
+      const marker = new naver.maps.Marker({
+        map: map,
+        position: latlng,
+      })
+    } else {
+      alert("검색 결과가 없습니다.");
+    }
+  }
+```
+
+---
+
+이전 검색결과가 남는 것이 문제다.  
+이점도 해결해보자.
+
+```javascript
+
+```
