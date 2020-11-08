@@ -822,5 +822,47 @@ const marker = new naver.maps.Marker({
 이점도 해결해보자.
 
 ```javascript
+  let ps = new kakao.maps.services.Places(); // 앞으로 목적지 검색을 하는데 있어서 중요한 역할을 하게되는 함수 중에 하나다.
+  let search_arr = [];
 
+  $("#search_input").on("keydown", function (e) {
+    if (e.keyCode === 13) { // enter key 눌렀을 때,
+      let content = $(this).val();
+      ps.keywordSearch(content, placeSearchCB); // content 를 통해서 api를 요청하게 되고 그거에 대한 결과값이 placeSearchCB 라는 함수를 통해서 처리된다.
+    }
+  })
+
+  $("#search_button").on("click", function () {
+    let content = $("#search_input").val();
+    ps.keywordSearch(content, placeSearchCB); // content 를 통해서 api를 요청하게 되고 그거에 대한 결과값이 placeSearchCB 라는 함수를 통해서 처리된다.
+  })
+
+  function placeSearchCB (data, status, pagination) {
+    // data - 검색결과
+    // status - api를 카카오 서버를 활용할 것이기 때문에 그 서버에 대한 상태를 status를 통해 받을 수 있다.
+    // pagination - 검색 결과가 얼만큼 있는지 번호를 통해 알 수 있게 해준다.
+    if (status === kakao.maps.services.Status.OK) {
+      let target = data[0];
+      const lat = target.y;
+      const lng = target.x;
+      const latlng = new naver.maps.LatLng(lat, lng);
+      const marker = new naver.maps.Marker({
+        map: map,
+        position: latlng,
+      })
+
+      if (search_arr.length === 0) {
+        search_arr.push(marker);
+      } else {
+        search_arr.push(marker);
+        let pre_marker = search_arr.splice(0, 1); // splice 메서드는 search_arr 배열 자체에 영향을 끼치는 메서드이다. 맨 앞에값 한개 지운다는 뜻이다.
+        pre_marker[0].setMap(null); // 아, setMap 메서드는 naver maps 메서드인가보다. 이전 마커 지우는 역할이다.
+      }
+
+      map.setZoom(15, false); // zoom은 15정도로 하고 이동하는 애니메이션은 주지 않겠다.(false)
+      map.panTo(latlng); // 현재위치로 이동
+    } else {
+      alert("검색 결과가 없습니다.");
+    }
+  }
 ```
